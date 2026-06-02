@@ -25,7 +25,7 @@ const Sidebar = () => {
           <BookOpen size={24} />
         </div>
         <div>
-          <h2 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', lineHeight: '1.2' }}>Azhan<br/><span style={{ color: 'var(--primary)' }}>Desktop</span></h2>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', lineHeight: '1.2' }}>MOE<span style={{ color: 'var(--primary)' }}>SALAAT</span></h2>
         </div>
       </div>
 
