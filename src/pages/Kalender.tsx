@@ -2,70 +2,88 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Moon } from 'lucide-react';
+import { Calendar as CalendarIcon, Moon, ChevronLeft, ChevronRight, WifiOff, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
-
-interface HijriDate {
-  date: string;
-  day: string;
-  month: { en: string; ar: string; number: number };
-  year: string;
-  holidays: string[];
-}
-
-interface GregorianDate {
-  date: string;
-  day: string;
-  month: { en: string; number: number };
-  year: string;
-}
-
-interface DayData {
-  hijri: HijriDate;
-  gregorian: GregorianDate;
-}
 
 const Kalender: React.FC = () => {
   const { language } = useAppStore();
-  const [currentDate, setCurrentDate] = useState(dayjs());
-  const [calendarData, setCalendarData] = useState<DayData[]>([]);
+  const [currentDate] = useState(dayjs());
+  const [todayData, setTodayData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const month = currentDate.month() + 1; // 1-12
-  const year = currentDate.year();
+  const [viewMode, setViewMode] = useState<'today' | 'month'>('today');
+  const [selectedMonthDate, setSelectedMonthDate] = useState(dayjs());
+  const [monthData, setMonthData] = useState<any[]>([]);
+  const [loadingMonth, setLoadingMonth] = useState(false);
+
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchCalendarData(month, year);
-  }, [month, year]);
+    if (!navigator.onLine) {
+      setError(language === 'id' ? 'Anda harus terhubung ke internet untuk memuat Kalender.' : 'You must be connected to the internet to load the Calendar.');
+      setLoading(false);
+    } else {
+      fetchToday();
+    }
 
-  const fetchCalendarData = async (m: number, y: number) => {
+    const handleOnline = () => {
+      setError(null);
+      if (!todayData) fetchToday();
+    };
+    const handleOffline = () => {
+      setError(language === 'id' ? 'Koneksi internet terputus.' : 'Internet connection lost.');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [currentDate, language]);
+
+  const fetchToday = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await axios.get(`https://api.aladhan.com/v1/gToHCalendar/${m}/${y}`);
+      const dateStr = currentDate.format('DD-MM-YYYY');
+      const response = await axios.get(`https://api.aladhan.com/v1/gToH/${dateStr}`);
       if (response.data && response.data.code === 200) {
-        setCalendarData(response.data.data);
+        setTodayData(response.data.data);
       }
     } catch (error) {
       console.error('Failed to fetch calendar:', error);
+      setError(language === 'id' ? 'Gagal memuat data. Pastikan Anda terhubung ke internet.' : 'Failed to load data. Please ensure you are connected to the internet.');
     } finally {
       setLoading(false);
     }
   };
 
-  const nextMonth = () => setCurrentDate(currentDate.add(1, 'month'));
-  const prevMonth = () => setCurrentDate(currentDate.subtract(1, 'month'));
-  const goToToday = () => setCurrentDate(dayjs());
+  useEffect(() => {
+    if (viewMode === 'month') {
+      fetchMonth();
+    }
+  }, [viewMode, selectedMonthDate]);
 
-  // Calendar Grid calculation
-  const startDay = dayjs(new Date(year, month - 1, 1)).day(); // 0 (Sun) to 6 (Sat)
-  const daysInMonth = calendarData.length;
-  
-  // Fill empty slots for previous month
-  const emptySlots = Array.from({ length: startDay }, (_, i) => i);
-  
-  const weekdays = language === 'id' 
-    ? ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
-    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const fetchMonth = async () => {
+    if (!navigator.onLine) {
+      alert(language === 'id' ? 'Anda harus terhubung ke internet untuk memuat bulan ini.' : 'You must be connected to the internet to load this month.');
+      return;
+    }
+    setLoadingMonth(true);
+    try {
+      const response = await axios.get(`https://api.aladhan.com/v1/gToHCalendar/${selectedMonthDate.format('M')}/${selectedMonthDate.format('YYYY')}`);
+      if (response.data && response.data.code === 200) {
+        setMonthData(response.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch month calendar:', error);
+      alert(language === 'id' ? 'Gagal memuat data bulan ini. Pastikan koneksi stabil.' : 'Failed to load this month. Ensure stable connection.');
+    } finally {
+      setLoadingMonth(false);
+    }
+  };
 
   const getHijriMonthName = (enName: string) => {
     if (language === 'en') return enName;
@@ -86,137 +104,170 @@ const Kalender: React.FC = () => {
     return translations[enName] || enName;
   };
 
-  return (
-    <div className="animate-slide-in" style={{ paddingBottom: '40px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontSize: '32px', fontWeight: '700', marginBottom: '8px' }}>
-            {language === 'id' ? 'Kalender Hijriah' : 'Hijri Calendar'}
-          </h1>
-          <p style={{ color: 'var(--text-muted)' }}>
-            {language === 'id' ? 'Konversi tanggal Masehi ke penanggalan Hijriah' : 'Convert Gregorian dates to the Hijri calendar'}
-          </p>
+  const renderCalendarGrid = () => {
+    if (loadingMonth) {
+      return (
+        <div className="pulse-active" style={{ color: 'var(--primary)' }}>
+          <Moon size={48} />
+        </div>
+      );
+    }
+
+    const days = ['Ahd', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    const daysEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const headers = language === 'id' ? days : daysEn;
+    
+    const startDay = selectedMonthDate.startOf('month').day();
+    const blanks = Array(startDay).fill(null);
+    
+    // Check what hijri months are in this gregorian month
+    const hijriMonths = Array.from(new Set(monthData.map(d => d.hijri.month.en)));
+    const hijriMonthsStr = hijriMonths.map(m => getHijriMonthName(m as string)).join(' / ');
+    const hijriYears = Array.from(new Set(monthData.map(d => d.hijri.year))).join(' / ');
+
+    return (
+      <div className="no-drag" style={{ width: '460px', padding: '24px', background: 'var(--glass-bg)', borderRadius: '32px', border: '1px solid var(--glass-border)', boxShadow: 'var(--glass-shadow)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <button onClick={() => setSelectedMonthDate(selectedMonthDate.subtract(1, 'month'))} style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '50%', cursor: 'pointer', color: 'var(--text-main)', width: '32px', height: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+            <ChevronLeft size={18} />
+          </button>
+          
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--primary)' }}>
+              {selectedMonthDate.locale(language).format('MMMM YYYY')}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--secondary)', fontWeight: '600' }}>
+              {hijriMonthsStr} {hijriYears}
+            </div>
+          </div>
+          
+          <button onClick={() => setSelectedMonthDate(selectedMonthDate.add(1, 'month'))} style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '50%', cursor: 'pointer', color: 'var(--text-main)', width: '32px', height: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+            <ChevronRight size={18} />
+          </button>
         </div>
         
-        <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', padding: '8px', gap: '12px' }}>
-          <button onClick={prevMonth} className="nav-item" style={{ width: '40px', height: '40px', padding: 0, justifyContent: 'center' }}>
-            <ChevronLeft size={20} />
-          </button>
-          
-          <div style={{ width: '180px', textAlign: 'center', fontWeight: '600', fontSize: '18px' }}>
-            {currentDate.format('MMMM YYYY')}
-          </div>
-          
-          <button onClick={nextMonth} className="nav-item" style={{ width: '40px', height: '40px', padding: 0, justifyContent: 'center' }}>
-            <ChevronRight size={20} />
-          </button>
-          
-          <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
-          
-          <button onClick={goToToday} className="btn-primary" style={{ padding: '8px 16px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <CalendarIcon size={16} /> {language === 'id' ? 'Hari Ini' : 'Today'}
-          </button>
-        </div>
-      </div>
-
-      <div className="glass-panel" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column' }}>
-        {/* Weekday Headers */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', marginBottom: '16px' }}>
-          {weekdays.map((day, idx) => (
-            <div key={day} style={{ 
-              textAlign: 'center', 
-              fontWeight: '600', 
-              color: idx === 0 ? '#ef4444' : 'var(--text-muted)',
-              padding: '12px 0',
-              borderBottom: '2px solid var(--border-color)'
-            }}>
-              {day}
-            </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', marginBottom: '8px' }}>
+          {headers.map(d => (
+            <div key={d} style={{ textAlign: 'center', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)' }}>{d}</div>
           ))}
         </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+          {blanks.map((_, i) => <div key={`blank-${i}`} />)}
+          
+          {monthData.map((dayData, index) => {
+            const isToday = dayData.gregorian.date === currentDate.format('DD-MM-YYYY');
+            return (
+              <div key={index} style={{
+                background: isToday ? 'var(--primary)' : 'var(--surface-color)',
+                color: isToday ? 'white' : 'var(--text-main)',
+                borderRadius: '12px',
+                padding: '6px 2px',
+                textAlign: 'center',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: isToday ? '0 4px 12px rgba(15, 110, 86, 0.3)' : 'none'
+              }}>
+                <div style={{ fontSize: '16px', fontWeight: 'bold', lineHeight: '1' }}>{dayData.gregorian.day}</div>
+                <div style={{ fontSize: '11px', marginTop: '4px', color: isToday ? 'rgba(255,255,255,0.85)' : 'var(--secondary)', fontWeight: '500' }}>
+                  {dayData.hijri.day}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
-        {loading ? (
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-             <div className="pulse-active" style={{ color: 'var(--primary)' }}>
-               <Moon size={48} />
-             </div>
+  if (error && !todayData && viewMode === 'today') {
+    return (
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '0 40px', textAlign: 'center' }}>
+        <div style={{ background: 'var(--glass-bg)', padding: '24px', borderRadius: '24px', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: 'var(--glass-shadow)' }}>
+          <WifiOff size={48} style={{ color: '#ef4444', marginBottom: '16px' }} />
+          <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '8px' }}>
+            {language === 'id' ? 'Tidak Ada Internet' : 'No Internet'}
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
+            {error}
+          </div>
+          <button 
+            className="no-drag"
+            onClick={fetchToday}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--primary)', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '20px', cursor: 'pointer', fontWeight: '600' }}
+          >
+            <RefreshCw size={16} />
+            {language === 'id' ? 'Coba Lagi' : 'Try Again'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+      
+      {/* Toggle View Buttons */}
+      <div className="no-drag" style={{ position: 'absolute', top: '50px', zIndex: 10 }}>
+        <div style={{ display: 'flex', background: 'var(--glass-bg)', borderRadius: '24px', border: '1px solid var(--glass-border)', overflow: 'hidden', boxShadow: 'var(--glass-shadow)' }}>
+          <button 
+            onClick={() => setViewMode('today')}
+            style={{ padding: '8px 20px', background: viewMode === 'today' ? 'var(--primary)' : 'transparent', color: viewMode === 'today' ? 'white' : 'var(--text-main)', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '600', transition: 'all 0.3s' }}
+          >
+            {language === 'id' ? 'Hari Ini' : 'Today'}
+          </button>
+          <button 
+            onClick={() => setViewMode('month')}
+            style={{ padding: '8px 20px', background: viewMode === 'month' ? 'var(--primary)' : 'transparent', color: viewMode === 'month' ? 'white' : 'var(--text-main)', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '600', transition: 'all 0.3s' }}
+          >
+            {language === 'id' ? 'Bulan Ini' : 'This Month'}
+          </button>
+        </div>
+      </div>
+
+      {viewMode === 'today' ? (
+        loading ? (
+          <div className="pulse-active" style={{ color: 'var(--primary)' }}>
+            <Moon size={48} />
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', flex: 1, gridAutoRows: '1fr' }}>
-            {emptySlots.map(slot => (
-              <div key={`empty-${slot}`} style={{ borderRadius: '12px', background: 'transparent' }}></div>
-            ))}
+          <div style={{
+            width: '380px', height: '380px', borderRadius: '50%', 
+            background: 'radial-gradient(circle, var(--glass-bg) 0%, transparent 100%)',
+            border: '6px solid var(--secondary)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 40px rgba(201, 168, 76, 0.2)',
+            position: 'relative', transform: 'translateY(10px)'
+          }}>
+            <CalendarIcon size={32} style={{ color: 'var(--secondary)', marginBottom: '12px' }} />
             
-            {calendarData.map((data, idx) => {
-              const isToday = dayjs().format('DD-MM-YYYY') === data.gregorian.date;
-              const isSunday = (startDay + idx) % 7 === 0;
-              
-              return (
-                <div 
-                  key={data.gregorian.date}
-                  style={{
-                    position: 'relative',
-                    borderRadius: '12px',
-                    padding: '12px',
-                    border: isToday ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                    background: isToday ? 'rgba(15, 110, 86, 0.05)' : 'var(--surface-color)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    minHeight: '100px',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--primary)';
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = isToday ? 'var(--primary)' : 'var(--border-color)';
-                    e.currentTarget.style.transform = 'none';
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <span style={{ 
-                      fontSize: '20px', 
-                      fontWeight: '700', 
-                      color: isSunday ? '#ef4444' : 'var(--text-main)'
-                    }}>
-                      {parseInt(data.gregorian.day, 10)}
-                    </span>
-                    <span style={{ 
-                      fontSize: '16px', 
-                      fontWeight: '700', 
-                      color: 'var(--primary)',
-                      fontFamily: '"Amiri", serif'
-                    }}>
-                      {parseInt(data.hijri.day, 10)}
-                    </span>
-                  </div>
-                  
-                  <div style={{ marginTop: 'auto', textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>
-                      {getHijriMonthName(data.hijri.month.en)} {data.hijri.year}
-                    </div>
-                    {data.hijri.holidays.length > 0 && (
-                      <div style={{ 
-                        fontSize: '10px', 
-                        color: 'white', 
-                        background: 'var(--secondary)', 
-                        padding: '2px 6px', 
-                        borderRadius: '4px',
-                        display: 'inline-block',
-                        marginTop: '4px'
-                      }}>
-                        {data.hijri.holidays[0]}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            <div style={{ fontSize: '96px', fontWeight: 'bold', color: 'var(--primary)', lineHeight: '1', marginBottom: '8px' }}>
+               {todayData?.hijri?.day}
+            </div>
+            
+            <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-main)', textAlign: 'center', padding: '0 20px' }}>
+               {todayData?.hijri?.month?.en ? getHijriMonthName(todayData.hijri.month.en) : ''} {todayData?.hijri?.year}
+            </div>
+            
+            <div style={{ fontSize: '16px', color: 'var(--text-muted)', marginTop: '12px' }}>
+               {currentDate.locale(language).format('D MMMM YYYY')}
+            </div>
+            
+            {todayData?.hijri?.holidays?.length > 0 && (
+              <div style={{ marginTop: '16px', fontSize: '14px', background: 'var(--primary)', color: 'white', padding: '6px 16px', borderRadius: '16px', textAlign: 'center', maxWidth: '240px' }}>
+                 {todayData.hijri.holidays[0]}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        )
+      ) : (
+        <div style={{ transform: 'translateY(20px)' }}>
+          {renderCalendarGrid()}
+        </div>
+      )}
     </div>
   );
 };

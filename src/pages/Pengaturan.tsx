@@ -1,97 +1,87 @@
 import React from 'react';
 import { useAppStore } from '../stores/useAppStore';
-import { Globe, Bell, BellOff } from 'lucide-react';
+import { Globe, Bell, BellOff, Power, PowerOff } from 'lucide-react';
+import { enable, isEnabled, disable } from '@tauri-apps/plugin-autostart';
 
 const Pengaturan: React.FC = () => {
   const { language, setLanguage, notificationsEnabled, setNotificationsEnabled } = useAppStore();
 
-  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setLanguage(e.target.value as 'id' | 'en');
+  const handleLanguageChange = (lang: 'id' | 'en') => {
+    setLanguage(lang);
   };
 
   const handleNotificationToggle = () => {
     setNotificationsEnabled(!notificationsEnabled);
   };
 
-  const t = {
-    title: language === 'id' ? 'Pengaturan' : 'Settings',
-    description: language === 'id' ? 'Atur preferensi aplikasi Anda di sini.' : 'Manage your application preferences here.',
-    langLabel: language === 'id' ? 'Bahasa Aplikasi' : 'App Language',
-    langDesc: language === 'id' ? 'Pilih bahasa antarmuka aplikasi.' : 'Choose the interface language.',
-    notifLabel: language === 'id' ? 'Notifikasi Azan' : 'Adhan Notifications',
-    notifDesc: language === 'id' ? 'Hidupkan atau matikan suara dan popup notifikasi saat waktu salat.' : 'Turn adhan sounds and popup notifications on or off.',
-    on: language === 'id' ? 'Aktif' : 'On',
-    off: language === 'id' ? 'Mati' : 'Off',
+  const [autoStart, setAutoStart] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkAutoStart = async () => {
+      try {
+        const enabled = await isEnabled();
+        setAutoStart(enabled);
+      } catch (e) {
+        console.error('AutoStart check error:', e);
+      }
+    };
+    checkAutoStart();
+  }, []);
+
+  const handleAutoStartToggle = async () => {
+    try {
+      if (autoStart) {
+        await disable();
+        setAutoStart(false);
+      } else {
+        await enable();
+        setAutoStart(true);
+      }
+    } catch (e) {
+      console.error('AutoStart toggle error:', e);
+    }
   };
 
   return (
-    <div className="animate-slide-in" style={{ paddingBottom: '40px' }}>
-      <div style={{ marginBottom: '40px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>{t.title}</h1>
-        <p style={{ color: 'var(--text-muted)' }}>{t.description}</p>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '32px', marginTop: '20px', color: 'var(--text-main)' }}>
+        {language === 'id' ? 'Pengaturan' : 'Settings'}
       </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '600px' }}>
-        {/* Language Setting */}
-        <div className="glass-panel" style={{ padding: '24px', display: 'flex', alignItems: 'flex-start', gap: '20px' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(15, 110, 86, 0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--primary)', flexShrink: 0 }}>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '420px' }}>
+        
+        {/* Language */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass-bg)', padding: '16px 20px', borderRadius: '24px', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-main)' }}>
             <Globe size={24} />
+            <span style={{ fontSize: '18px', fontWeight: '500' }}>{language === 'id' ? 'Bahasa' : 'Language'}</span>
           </div>
-          <div style={{ flex: 1 }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>{t.langLabel}</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '16px' }}>{t.langDesc}</p>
-            <select 
-              value={language} 
-              onChange={handleLanguageChange}
-              style={{
-                padding: '10px 16px',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                background: 'var(--surface-color)',
-                color: 'var(--text-main)',
-                fontSize: '15px',
-                outline: 'none',
-                cursor: 'pointer',
-                minWidth: '200px'
-              }}
-            >
-              <option value="id">Bahasa Indonesia</option>
-              <option value="en">English</option>
-            </select>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={() => handleLanguageChange('id')} style={{ background: language === 'id' ? 'var(--primary)' : 'transparent', color: language === 'id' ? 'white' : 'var(--text-muted)', border: 'none', borderRadius: '14px', padding: '6px 12px', fontSize: '14px', cursor: 'pointer', transition: 'all 0.3s' }}>ID</button>
+            <button onClick={() => handleLanguageChange('en')} style={{ background: language === 'en' ? 'var(--primary)' : 'transparent', color: language === 'en' ? 'white' : 'var(--text-muted)', border: 'none', borderRadius: '14px', padding: '6px 12px', fontSize: '14px', cursor: 'pointer', transition: 'all 0.3s' }}>EN</button>
           </div>
         </div>
 
-        {/* Notifications Setting */}
-        <div className="glass-panel" style={{ padding: '24px', display: 'flex', alignItems: 'flex-start', gap: '20px' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: notificationsEnabled ? 'rgba(15, 110, 86, 0.1)' : 'rgba(239, 68, 68, 0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: notificationsEnabled ? 'var(--primary)' : '#ef4444', flexShrink: 0, transition: 'all 0.3s ease' }}>
-            {notificationsEnabled ? <Bell size={24} /> : <BellOff size={24} />}
+        {/* Notifications */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass-bg)', padding: '16px 20px', borderRadius: '24px', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-main)' }}>
+            {notificationsEnabled ? <Bell size={24} color="var(--primary)" /> : <BellOff size={24} color="var(--text-muted)" />}
+            <span style={{ fontSize: '18px', fontWeight: '500' }}>{language === 'id' ? 'Notifikasi' : 'Notifications'}</span>
           </div>
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>{t.notifLabel}</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>{t.notifDesc}</p>
-            </div>
-            
-            <button 
-              onClick={handleNotificationToggle}
-              style={{
-                background: notificationsEnabled ? 'var(--primary)' : 'var(--surface-color)',
-                border: notificationsEnabled ? 'none' : '1px solid var(--border-color)',
-                color: notificationsEnabled ? 'white' : 'var(--text-main)',
-                padding: '8px 20px',
-                borderRadius: '20px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: notificationsEnabled ? '0 4px 12px rgba(15, 110, 86, 0.2)' : 'none'
-              }}
-            >
-              {notificationsEnabled ? t.on : t.off}
-            </button>
+          <button className="no-drag" onClick={handleNotificationToggle} style={{ background: notificationsEnabled ? 'var(--primary)' : 'transparent', color: notificationsEnabled ? 'white' : 'var(--text-muted)', border: notificationsEnabled ? 'none' : '1px solid var(--border-color)', borderRadius: '14px', padding: '6px 16px', fontSize: '14px', cursor: 'pointer', transition: 'all 0.3s' }}>
+            {notificationsEnabled ? 'ON' : 'OFF'}
+          </button>
+        </div>
+
+        {/* Auto Start */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass-bg)', padding: '16px 20px', borderRadius: '24px', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-main)' }}>
+            {autoStart ? <Power size={24} color="var(--primary)" /> : <PowerOff size={24} color="var(--text-muted)" />}
+            <span style={{ fontSize: '18px', fontWeight: '500' }}>{language === 'id' ? 'Mulai Otomatis (Startup)' : 'Start on Boot'}</span>
           </div>
+          <button className="no-drag" onClick={handleAutoStartToggle} style={{ background: autoStart ? 'var(--primary)' : 'transparent', color: autoStart ? 'white' : 'var(--text-muted)', border: autoStart ? 'none' : '1px solid var(--border-color)', borderRadius: '14px', padding: '6px 16px', fontSize: '14px', cursor: 'pointer', transition: 'all 0.3s' }}>
+            {autoStart ? 'ON' : 'OFF'}
+          </button>
         </div>
 
       </div>

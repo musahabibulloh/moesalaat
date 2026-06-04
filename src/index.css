@@ -33,12 +33,32 @@
   padding: 0;
 }
 
+html, body {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
 body {
   font-family: 'Poppins', sans-serif;
-  background-color: var(--bg-color);
   color: var(--text-main);
-  transition: background-color 0.3s ease, color 0.3s ease;
-  overflow: hidden; /* Desktop app feel */
+  transition: color 0.3s ease;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  background-color: transparent !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Glassmorphism utility */
@@ -89,27 +109,31 @@ body {
 
 .app-container {
   display: flex;
-  height: 100vh;
-  width: 100vw;
-}
-
-.sidebar {
-  width: 250px;
-  height: 100%;
-  padding: 24px;
-  display: flex;
   flex-direction: column;
-  gap: 16px;
-  border-right: 1px solid var(--border-color);
-  background-color: var(--surface-color);
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background-color: var(--bg-color);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border-color);
+  transition: background-color 0.3s ease;
 }
 
 .main-content {
   flex: 1;
   height: 100%;
+  width: 100%;
   overflow-y: auto;
-  padding: 32px;
+  padding: 24px;
   position: relative;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.main-content::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-item {

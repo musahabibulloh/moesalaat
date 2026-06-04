@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../stores/useAppStore';
-import { getPrayerTimes, getNextPrayer, reverseGeocode } from '../utils/prayerTimes';
+import { getNextPrayer, reverseGeocode } from '../utils/prayerTimes';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
-import { MapPin, Clock, Sun, Sunrise, Sunset, Moon, Search, X, Bell } from 'lucide-react';
+import { MapPin, Clock } from 'lucide-react';
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 import axios from 'axios';
 
@@ -12,14 +12,12 @@ dayjs.locale('id');
 const Dashboard: React.FC = () => {
   const { location, setLocation, language } = useAppStore();
   const [currentTime, setCurrentTime] = useState(dayjs());
-  const [prayerTimes, setPrayerTimes] = useState<any>(null);
   const [nextPrayer, setNextPrayer] = useState<any>(null);
   const [countdown, setCountdown] = useState('');
-  const [isLocating, setIsLocating] = useState(false);
-  
-  // Manual Location State
-  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(dayjs()), 1000);
@@ -28,8 +26,6 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     if (location) {
-      const times = getPrayerTimes(location.lat, location.lng);
-      setPrayerTimes(times);
       const next = getNextPrayer(location.lat, location.lng);
       setNextPrayer(next);
     }
@@ -97,8 +93,7 @@ const Dashboard: React.FC = () => {
   };
 
   const handleGetLocation = async () => {
-    setIsLocating(true);
-    
+    setIsSearchingLocation(false);
     // Attempt high-accuracy geolocation first
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -107,7 +102,6 @@ const Dashboard: React.FC = () => {
           const lng = position.coords.longitude;
           const city = await reverseGeocode(lat, lng);
           setLocation(lat, lng, city);
-          setIsLocating(false);
         },
         async (err) => {
           console.warn("Geolocation denied or failed, falling back to IP geolocation", err);
@@ -132,181 +126,181 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       console.error(error);
       alert("Gagal mendapatkan lokasi otomatis. Silakan cari kota Anda secara manual.");
-    } finally {
-      setIsLocating(false);
     }
   };
 
-  const searchLocation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    
-    setIsLocating(true);
+  const searchLocation = async (query: string) => {
+    if (!query) return;
+    setSearching(true);
     try {
-      const response = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&accept-language=id`);
-      if (response.data && response.data.length > 0) {
-        const { lat, lon, display_name } = response.data[0];
-        const simpleName = display_name.split(',')[0];
-        setLocation(parseFloat(lat), parseFloat(lon), simpleName);
-        setIsEditingLocation(false);
-        setSearchQuery('');
-      } else {
-        alert("Kota tidak ditemukan. Coba masukkan nama kota yang lebih spesifik.");
-      }
+      const response = await axios.get(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`);
+      setSearchResults(response.data);
     } catch (error) {
-      alert("Gagal mencari lokasi. Periksa koneksi internet Anda.");
+      console.error(error);
     } finally {
-      setIsLocating(false);
-    }
-  };
-
-  const formatTime = (date: Date) => dayjs(date).format('HH:mm');
-  const getIcon = (name: string) => {
-    switch (name) {
-      case 'Fajr': return <Moon className="w-8 h-8 opacity-70" />;
-      case 'Sunrise': return <Sunrise className="w-8 h-8 opacity-70" />;
-      case 'Dhuhr': return <Sun className="w-8 h-8 opacity-70" />;
-      case 'Asr': return <Sun className="w-8 h-8 opacity-70" />;
-      case 'Maghrib': return <Sunset className="w-8 h-8 opacity-70" />;
-      case 'Isha': return <Moon className="w-8 h-8 opacity-70" />;
-      default: return <Clock className="w-8 h-8 opacity-70" />;
+      setSearching(false);
     }
   };
 
   return (
-    <div className="animate-slide-in" style={{ paddingBottom: '40px' }}>
-      {/* Header section */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-        <div>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>Dashboard</h1>
-          <p style={{ color: 'var(--text-muted)' }}>{currentTime.locale(language).format('dddd, D MMMM YYYY')}</p>
-        </div>
-        
-        <div className="glass-panel" style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '16px', minWidth: '300px' }}>
-          <MapPin size={20} color="var(--primary)" />
-          
-          <div style={{ flex: 1 }}>
-            {isEditingLocation ? (
-              <form onSubmit={searchLocation} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input 
-                  type="text" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={language === 'id' ? "Cari nama kota..." : "Search city name..."}
-                  autoFocus
-                  style={{ 
-                    padding: '6px 12px', 
-                    borderRadius: '6px', 
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--surface-color)',
-                    color: 'var(--text-main)',
-                    width: '100%',
-                    outline: 'none'
-                  }}
-                />
-                <button type="button" onClick={() => setIsEditingLocation(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
-                  <X size={16} />
-                </button>
-              </form>
-            ) : (
-              <>
-                <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{language === 'id' ? 'Lokasi Saat Ini' : 'Current Location'}</div>
-                <div style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {location ? location.city : (language === 'id' ? 'Belum diatur' : 'Not set')}
-                  <button 
-                    onClick={() => setIsEditingLocation(true)} 
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', display: 'flex', alignItems: 'center' }}
-                    title={language === 'id' ? 'Ubah Lokasi Manual' : 'Change Location Manually'}
-                  >
-                    <Search size={14} />
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-          
-          {!isEditingLocation && (
-            <button 
-              className="btn-primary" 
-              style={{ padding: '8px 16px', fontSize: '12px', whiteSpace: 'nowrap' }}
-              onClick={handleGetLocation}
-              disabled={isLocating}
-            >
-              {isLocating 
-                ? (language === 'id' ? 'Mencari...' : 'Locating...') 
-                : 'Auto GPS'}
+    <div style={{ 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      position: 'relative'
+    }}>
+      {/* Location Badge */}
+      <div 
+        className="no-drag"
+        style={{ 
+          position: 'absolute', 
+          top: '60px', 
+          background: 'var(--glass-bg)',
+          padding: '6px 16px',
+          borderRadius: '24px',
+          fontSize: '14px', 
+          color: 'var(--text-muted)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '4px',
+          border: '1px solid var(--glass-border)',
+          cursor: 'pointer',
+          zIndex: 10
+        }} 
+        onClick={() => setIsSearchingLocation(true)}
+      >
+        <MapPin size={14} /> 
+        {location ? location.city : (language === 'id' ? 'Atur Lokasi' : 'Set Location')}
+      </div>
+
+      {isSearchingLocation && (
+        <div className="no-drag" style={{
+          position: 'absolute',
+          top: '95px',
+          background: 'var(--surface-color)',
+          padding: '16px',
+          borderRadius: '16px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+          zIndex: 50,
+          width: '320px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          border: '1px solid var(--border-color)'
+        }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input 
+              autoFocus
+              type="text" 
+              placeholder={language === 'id' ? "Cari kota (misal: Jakarta)..." : "Search city..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && searchLocation(searchQuery)}
+              style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-main)', outline: 'none' }}
+            />
+            <button onClick={() => searchLocation(searchQuery)} style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer', fontSize: '14px' }}>
+              {language === 'id' ? 'Cari' : 'Search'}
             </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main Clock & Countdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '40px' }}>
-        <div className="glass-panel" style={{ padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', overflow: 'hidden' }}>
-          {/* Decorative background element */}
-          <div style={{ position: 'absolute', width: '200px', height: '200px', background: 'var(--primary)', opacity: '0.05', borderRadius: '50%', top: '-50px', right: '-50px' }}></div>
+          </div>
           
-          <div style={{ fontSize: '64px', fontWeight: '700', lineHeight: '1', color: 'var(--primary)', marginBottom: '8px' }}>
-            {currentTime.format('HH:mm')}
-          </div>
-          <div style={{ fontSize: '18px', fontWeight: '500', color: 'var(--text-muted)' }}>
-            {currentTime.format('ss')} {language === 'id' ? 'Detik' : 'Seconds'}
-          </div>
-        </div>
+          <button onClick={handleGetLocation} style={{ background: 'rgba(15, 110, 86, 0.1)', color: 'var(--primary)', border: 'none', borderRadius: '8px', padding: '8px', fontSize: '13px', cursor: 'pointer', marginTop: '4px', fontWeight: '500' }}>
+            <MapPin size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
+            {language === 'id' ? "Gunakan Lokasi Otomatis (GPS/IP)" : "Use Auto Location (GPS/IP)"}
+          </button>
 
-        <div className="glass-panel" style={{ padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)', color: 'white', position: 'relative' }}>
-          <div style={{ fontSize: '18px', fontWeight: '500', marginBottom: '16px', opacity: 0.9 }}>
-            {language === 'id' ? 'Menuju' : 'Towards'} {nextPrayer ? translatePrayer(nextPrayer.name) : '...'}
-          </div>
-          <div className="pulse-active" style={{ fontSize: '56px', fontWeight: '700', lineHeight: '1' }}>
-            {countdown || '--:--:--'}
-          </div>
-        </div>
-      </div>
-
-      {/* Prayer Times Grid */}
-      <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '20px' }}>
-        {language === 'id' ? 'Jadwal Salat Hari Ini' : "Today's Prayer Times"}
-      </h2>
-      
-      {!location ? (
-        <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-          {language === 'id' ? 'Silakan atur lokasi terlebih dahulu untuk melihat jadwal salat.' : 'Please set your location first to view prayer times.'}
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-          {['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].map((prayerName) => {
-            const isNext = nextPrayer?.name === prayerName;
-            
-            return (
-              <div 
-                key={prayerName} 
-                className="glass-panel"
-                style={{ 
-                  padding: '24px', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center',
-                  border: isNext ? '2px solid var(--secondary)' : '',
-                  transform: isNext ? 'translateY(-4px)' : '',
-                  transition: 'all 0.3s ease',
-                  background: isNext ? 'rgba(201, 168, 76, 0.05)' : ''
-                }}
-              >
-                <div style={{ color: isNext ? 'var(--secondary)' : 'var(--primary)', marginBottom: '12px' }}>
-                  {getIcon(prayerName)}
+          {searching ? (
+            <div style={{ textAlign: 'center', fontSize: '13px', padding: '12px', color: 'var(--text-muted)' }}>Mencari...</div>
+          ) : (
+            <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '8px' }}>
+              {searchResults.map((res: any, idx) => (
+                <div 
+                  key={idx} 
+                  onClick={() => {
+                    // Extract just the city/county name from display_name if possible
+                    const cityParts = res.display_name.split(',');
+                    const cityName = cityParts[0].trim();
+                    setLocation(parseFloat(res.lat), parseFloat(res.lon), cityName);
+                    setIsSearchingLocation(false);
+                    setSearchResults([]);
+                    setSearchQuery('');
+                  }}
+                  style={{ padding: '10px 12px', fontSize: '13px', cursor: 'pointer', borderRadius: '8px', background: 'var(--bg-color)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                >
+                  {res.display_name}
                 </div>
-                <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px' }}>
-                  {translatePrayer(prayerName)}
-                </div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: isNext ? 'var(--secondary)' : 'var(--text-main)' }}>
-                  {prayerTimes ? formatTime(prayerTimes[prayerName]) : '--:--'}
-                </div>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          )}
+          
+          <button onClick={() => setIsSearchingLocation(false)} style={{ background: 'transparent', color: 'var(--text-muted)', border: 'none', cursor: 'pointer', fontSize: '13px', marginTop: '8px' }}>
+            {language === 'id' ? 'Tutup' : 'Close'}
+          </button>
         </div>
       )}
+      
+      {/* Central Clock Widget */}
+      <div style={{
+        width: '380px', 
+        height: '380px', 
+        borderRadius: '50%', 
+        background: 'radial-gradient(circle, var(--glass-bg) 0%, transparent 100%)',
+        border: '6px solid var(--primary)',
+        borderTopColor: 'var(--secondary)', /* Slight accent */
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        boxShadow: '0 0 40px rgba(15, 110, 86, 0.2)',
+        position: 'relative',
+        transform: 'translateY(-10px)'
+      }}>
+        {/* Decorative inner circle */}
+        <div style={{
+          position: 'absolute',
+          width: '350px',
+          height: '350px',
+          borderRadius: '50%',
+          border: '1px dashed var(--border-color)',
+          animation: 'spin 60s linear infinite'
+        }} />
+
+        <style>
+          {`
+            @keyframes spin { 100% { transform: rotate(360deg); } }
+          `}
+        </style>
+
+        <div style={{ zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--secondary)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '4px' }}>
+            {nextPrayer ? translatePrayer(nextPrayer.name) : '...'}
+          </div>
+          
+          <div style={{ fontSize: '18px', color: 'var(--primary)', fontWeight: 'bold', marginBottom: '8px', background: 'rgba(15, 110, 86, 0.1)', padding: '4px 16px', borderRadius: '16px' }}>
+            {nextPrayer ? dayjs(nextPrayer.time).format('HH:mm') : '--:--'}
+          </div>
+          
+          <div className="pulse-active" style={{ fontSize: '72px', fontWeight: '700', color: 'var(--text-main)', lineHeight: '1', margin: '8px 0' }}>
+            {countdown || '--:--'}
+          </div>
+          
+          <div style={{ fontSize: '20px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+            <Clock size={18} /> {currentTime.format('HH:mm:ss')}
+          </div>
+        </div>
+      </div>
+
+      {/* Mini Prayer Times Arc (Optional, showing only 2 next prayers or just current date) */}
+      <div style={{
+        position: 'absolute',
+        bottom: '120px',
+        fontSize: '16px',
+        color: 'var(--text-muted)',
+        fontWeight: '500'
+      }}>
+        {currentTime.locale(language).format('dddd, D MMMM')}
+      </div>
     </div>
   );
 };
