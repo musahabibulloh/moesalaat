@@ -1,8 +1,21 @@
+<div align="center">
+
+![MOESALAAT Banner](./public/banner.png)
+
 # 🌙 MOESALAAT Desktop
 
-MOESALAAT is a modern, beautifully designed desktop application for Muslims, built with React, TypeScript, Vite, and Tauri v2. It provides accurate prayer times, a complete Quran with audio, Hijri calendar tracking, and system-level Adhan notifications.
+**A modern, beautifully designed desktop application for Muslims, built with React, TypeScript, Vite, and Tauri v2.**
 
-![MOESALAAT](https://github.com/musahabibulloh/MuslimDesktopApp/assets/placeholder) <!-- You can add a real screenshot here later -->
+[![GitHub stars](https://img.shields.io/github/stars/musahabibulloh/MuslimDesktopApp?style=for-the-badge&color=00ff00)](https://github.com/musahabibulloh/MuslimDesktopApp/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/musahabibulloh/MuslimDesktopApp?style=for-the-badge&color=blue)](https://github.com/musahabibulloh/MuslimDesktopApp/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/musahabibulloh/MuslimDesktopApp?style=for-the-badge&color=red)](https://github.com/musahabibulloh/MuslimDesktopApp/issues)
+
+[**Download Latest Release**](https://github.com/musahabibulloh/MuslimDesktopApp/releases) • [**Report a Bug**](https://github.com/musahabibulloh/MuslimDesktopApp/issues)
+
+</div>
+
+MOESALAAT provides accurate prayer times, a complete Quran with audio, Hijri calendar tracking, and system-level Adhan notifications.
+
 
 ## ✨ Features
 
