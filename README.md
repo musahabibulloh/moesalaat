@@ -6,11 +6,11 @@
 
 **A modern, beautifully designed desktop application for Muslims, built with React, TypeScript, Vite, and Tauri v2.**
 
-[![GitHub stars](https://img.shields.io/github/stars/musahabibulloh/MuslimDesktopApp?style=for-the-badge&color=00ff00)](https://github.com/musahabibulloh/MuslimDesktopApp/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/musahabibulloh/MuslimDesktopApp?style=for-the-badge&color=blue)](https://github.com/musahabibulloh/MuslimDesktopApp/network/members)
-[![GitHub issues](https://img.shields.io/github/issues/musahabibulloh/MuslimDesktopApp?style=for-the-badge&color=red)](https://github.com/musahabibulloh/MuslimDesktopApp/issues)
+[![GitHub stars](https://img.shields.io/github/stars/musahabibulloh/moesalaat?style=for-the-badge&color=00ff00)](https://github.com/musahabibulloh/moesalaat/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/musahabibulloh/moesalaat?style=for-the-badge&color=blue)](https://github.com/musahabibulloh/moesalaat/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/musahabibulloh/moesalaat?style=for-the-badge&color=red)](https://github.com/musahabibulloh/moesalaat/issues)
 
-[**Download Latest Release**](https://github.com/musahabibulloh/MuslimDesktopApp/releases) • [**Report a Bug**](https://github.com/musahabibulloh/MuslimDesktopApp/issues)
+[**Download Latest Release**](https://github.com/musahabibulloh/moesalaat/releases) • [**Report a Bug**](https://github.com/musahabibulloh/moesalaat/issues)
 
 </div>
 
@@ -60,8 +60,8 @@ Make sure you have installed Node.js (v18+) and the [Tauri prerequisites](https:
 ### Setup
 1. Clone the repository:
    ```bash
-   git clone https://github.com/musahabibulloh/MuslimDesktopApp.git
-   cd MuslimDesktopApp
+   git clone https://github.com/musahabibulloh/moesalaat.git
+   cd moesalaat
    ```
 2. Install dependencies:
    ```bash
@@ -77,7 +77,7 @@ Make sure you have installed Node.js (v18+) and the [Tauri prerequisites](https:
    ```
 
 ## 🤝 Contribution
-Contributions, issues, and feature requests are always welcome! Feel free to check the [issues page](https://github.com/musahabibulloh/MuslimDesktopApp/issues).
+Contributions, issues, and feature requests are always welcome! Feel free to check the [issues page](https://github.com/musahabibulloh/moesalaat/issues).
 
 ---
 
