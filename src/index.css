@@ -178,3 +178,38 @@ body {
   background: var(--primary-light);
   transform: translateY(-2px);
 }
+
+/* Volume slider thumb */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 110, 86, 0.4);
+  border: 2px solid white;
+  transition: transform 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 110, 86, 0.4);
+  border: 2px solid white;
+}
+
+/* Stop adhan button animation */
+@keyframes stopPulse {
+  0% { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5); }
+  50% { box-shadow: 0 4px 30px rgba(239, 68, 68, 0.8); }
+  100% { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5); }
+}

@@ -3,14 +3,14 @@ import { useAppStore } from '../stores/useAppStore';
 import { getNextPrayer, reverseGeocode } from '../utils/prayerTimes';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
-import { MapPin, Clock } from 'lucide-react';
+import { MapPin, Clock, VolumeX } from 'lucide-react';
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 import axios from 'axios';
 
 dayjs.locale('id');
 
 const Dashboard: React.FC = () => {
-  const { location, setLocation, language } = useAppStore();
+  const { location, setLocation, language, playAdhan, stopAdhan, isAdhanPlaying } = useAppStore();
   const [currentTime, setCurrentTime] = useState(dayjs());
   const [nextPrayer, setNextPrayer] = useState<any>(null);
   const [countdown, setCountdown] = useState('');
@@ -70,10 +70,9 @@ const Dashboard: React.FC = () => {
     const notificationsEnabled = useAppStore.getState().notificationsEnabled;
     if (!notificationsEnabled) return;
 
-    // Play Adhan sound
+    // Play Adhan sound via the centralized store (can be stopped by user)
     try {
-      const audio = new Audio('https://www.islamcan.com/audio/adhan/azan1.mp3');
-      await audio.play();
+      await playAdhan();
     } catch (e) {
       console.log('Failed to play audio:', e);
     }
@@ -301,6 +300,36 @@ const Dashboard: React.FC = () => {
       }}>
         {currentTime.locale(language).format('dddd, D MMMM')}
       </div>
+
+      {/* Stop Azhan Button - appears when azhan is playing */}
+      {isAdhanPlaying && (
+        <button
+          className="no-drag"
+          onClick={stopAdhan}
+          style={{
+            position: 'absolute',
+            bottom: '80px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '24px',
+            padding: '10px 24px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            boxShadow: '0 4px 20px rgba(239, 68, 68, 0.5)',
+            animation: 'pulse 1.5s infinite ease-in-out',
+            zIndex: 20,
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <VolumeX size={18} />
+          {language === 'id' ? 'Stop Azhan' : 'Stop Adhan'}
+        </button>
+      )}
     </div>
   );
 };
