@@ -29,3 +29,6 @@ tauri-plugin-notification = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
 
+[target.'cfg(windows)'.dependencies]
+tauri-winrt-notification = "0.7.2"
+

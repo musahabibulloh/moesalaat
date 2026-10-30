@@ -2,11 +2,14 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useAppStore } from './stores/useAppStore';
 import Dashboard from './pages/Dashboard';
+import ActivityPrayers from './pages/ActivityPrayers';
 import Quran from './pages/Quran';
 import Kalender from './pages/Kalender';
 import Pengaturan from './pages/Pengaturan';
-import { LayoutGrid, Calendar, BookOpen, Settings, Moon, Sun, X, Minus, Square } from 'lucide-react';
+import { LayoutGrid, Activity, Calendar, BookOpen, Settings, Moon, Sun, X, Minus, Square } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { listen } from '@tauri-apps/api/event';
+import { onAction } from '@tauri-apps/plugin-notification';
 import { enable, isEnabled } from '@tauri-apps/plugin-autostart';
 
 const WindowControls = () => {
@@ -41,6 +44,7 @@ const CircularNav = () => {
 
   const navItems = [
     { path: '/', icon: <LayoutGrid size={18} /> },
+    { path: '/activity', icon: <Activity size={18} /> },
     { path: '/kalender', icon: <Calendar size={18} /> },
     { path: '/quran', icon: <BookOpen size={18} /> },
     { path: '/pengaturan', icon: <Settings size={18} /> },
@@ -106,6 +110,26 @@ const App: React.FC = () => {
   const [isMaximized, setIsMaximized] = React.useState(false);
   const [showAutoStartPrompt, setShowAutoStartPrompt] = React.useState(false);
   const appWindow = getCurrentWindow();
+
+  React.useEffect(() => {
+    // Listen to "stop-adhan" event dispatched when user clicks notification button or toast
+    const unlistenEvent = listen('stop-adhan', () => {
+      useAppStore.getState().stopAdhan();
+    });
+
+    // Also listen to plugin-notification actionPerformed
+    let pluginListener: { unregister: () => Promise<void> } | undefined;
+    onAction(() => {
+      useAppStore.getState().stopAdhan();
+    }).then((listener) => {
+      pluginListener = listener;
+    }).catch(() => {});
+
+    return () => {
+      unlistenEvent.then((f) => f());
+      if (pluginListener) pluginListener.unregister();
+    };
+  }, []);
 
   React.useEffect(() => {
     const checkPrompt = async () => {
@@ -209,6 +233,7 @@ const App: React.FC = () => {
         <div className="main-content drag-area" onMouseDown={handleDrag}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/activity" element={<ActivityPrayers />} />
             <Route path="/kalender" element={<Kalender />} />
             <Route path="/quran" element={<Quran />} />
             <Route path="/pengaturan" element={<Pengaturan />} />

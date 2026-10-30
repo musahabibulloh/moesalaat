@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppStore } from '../stores/useAppStore';
+import { usePrayerActivityStore } from '../stores/usePrayerActivityStore';
 import { getNextPrayer, reverseGeocode } from '../utils/prayerTimes';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
-import { MapPin, Clock, VolumeX } from 'lucide-react';
+import { MapPin, Clock, VolumeX, Activity } from 'lucide-react';
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
+import { invoke } from '@tauri-apps/api/core';
 import axios from 'axios';
 
 dayjs.locale('id');
 
 const Dashboard: React.FC = () => {
   const { location, setLocation, language, playAdhan, stopAdhan, isAdhanPlaying } = useAppStore();
+  const { getPrayerCount, getPrayerRecord } = usePrayerActivityStore();
+  const todayStr = dayjs().format('YYYY-MM-DD');
+  const todayCount = getPrayerCount(todayStr);
+  const todayRecord = getPrayerRecord(todayStr);
   const [currentTime, setCurrentTime] = useState(dayjs());
   const [nextPrayer, setNextPrayer] = useState<any>(null);
   const [countdown, setCountdown] = useState('');
@@ -70,11 +77,21 @@ const Dashboard: React.FC = () => {
     const notificationsEnabled = useAppStore.getState().notificationsEnabled;
     if (!notificationsEnabled) return;
 
-    // Play Adhan sound via the centralized store (can be stopped by user)
+    // Play Adhan sound via the centralized store (can be stopped by user or notification)
     try {
       await playAdhan();
     } catch (e) {
       console.log('Failed to play audio:', e);
+    }
+
+    const translated = translatePrayer(prayerName);
+
+    // Show native Windows notification with interactive "Matikan Azhan" button
+    try {
+      await invoke('show_adhan_notification', { prayerName: translated });
+      return;
+    } catch (err) {
+      console.warn('Native adhan notification invoke failed, using plugin fallback:', err);
     }
 
     let permissionGranted = await isPermissionGranted();
@@ -85,7 +102,7 @@ const Dashboard: React.FC = () => {
     
     if (permissionGranted) {
       sendNotification({
-        title: `Waktu ${translatePrayer(prayerName)} Telah Tiba`,
+        title: `Waktu ${translated} Telah Tiba`,
         body: 'Mari segera menunaikan ibadah salat.',
       });
     }
@@ -293,13 +310,60 @@ const Dashboard: React.FC = () => {
       {/* Mini Prayer Times Arc (Optional, showing only 2 next prayers or just current date) */}
       <div style={{
         position: 'absolute',
-        bottom: '120px',
-        fontSize: '16px',
+        bottom: '122px',
+        fontSize: '15px',
         color: 'var(--text-muted)',
         fontWeight: '500'
       }}>
         {currentTime.locale(language).format('dddd, D MMMM')}
       </div>
+
+      {/* Activity Prayers Pill */}
+      <Link 
+        to="/activity" 
+        className="no-drag"
+        style={{
+          position: 'absolute',
+          bottom: isAdhanPlaying ? '140px' : '72px',
+          textDecoration: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          background: 'var(--glass-bg)',
+          padding: '6px 14px',
+          borderRadius: '20px',
+          border: '1px solid var(--glass-border)',
+          boxShadow: 'var(--glass-shadow)',
+          fontSize: '12px',
+          color: 'var(--text-main)',
+          cursor: 'pointer',
+          zIndex: 10,
+          transition: 'all 0.2s ease'
+        }}
+      >
+        <Activity size={14} color="var(--primary)" />
+        <span>
+          {language === 'id' ? 'Sholat Hari Ini:' : 'Today Prayers:'}{' '}
+          <b style={{ color: 'var(--primary)' }}>{todayCount}/5</b>
+        </span>
+        <div style={{ display: 'flex', gap: '3px', marginLeft: '2px' }}>
+          {(['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const).map((key) => {
+            const isDone = !!todayRecord[key];
+            return (
+              <div
+                key={key}
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '2px',
+                  backgroundColor: isDone ? 'var(--primary)' : 'var(--border-color)',
+                  boxShadow: isDone ? '0 0 3px rgba(15, 110, 86, 0.5)' : 'none'
+                }}
+              />
+            );
+          })}
+        </div>
+      </Link>
 
       {/* Stop Azhan Button - appears when azhan is playing */}
       {isAdhanPlaying && (

@@ -4,7 +4,7 @@ import { Globe, Bell, BellOff, Power, PowerOff, Volume2, VolumeX } from 'lucide-
 import { enable, isEnabled, disable } from '@tauri-apps/plugin-autostart';
 
 const Pengaturan: React.FC = () => {
-  const { language, setLanguage, notificationsEnabled, setNotificationsEnabled, adhanVolume, setAdhanVolume, playAdhan, stopAdhan, isAdhanPlaying } = useAppStore();
+  const { language, setLanguage, notificationsEnabled, setNotificationsEnabled, adhanVolume, setAdhanVolume } = useAppStore();
 
   const handleLanguageChange = (lang: 'id' | 'en') => {
     setLanguage(lang);
@@ -118,37 +118,6 @@ const Pengaturan: React.FC = () => {
             />
             <Volume2 size={16} color="var(--text-muted)" />
           </div>
-          <button
-            className="no-drag"
-            onClick={() => {
-              if (isAdhanPlaying) {
-                stopAdhan();
-              } else {
-                playAdhan();
-              }
-            }}
-            style={{
-              background: isAdhanPlaying ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'rgba(15, 110, 86, 0.1)',
-              color: isAdhanPlaying ? 'white' : 'var(--primary)',
-              border: 'none',
-              borderRadius: '14px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              cursor: 'pointer',
-              fontWeight: '600',
-              transition: 'all 0.3s',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px'
-            }}
-          >
-            {isAdhanPlaying ? (
-              <><VolumeX size={14} /> {language === 'id' ? 'Stop Azhan' : 'Stop Adhan'}</>
-            ) : (
-              <><Volume2 size={14} /> {language === 'id' ? 'Tes Volume' : 'Test Volume'}</>
-            )}
-          </button>
         </div>
 
       </div>

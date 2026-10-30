@@ -4,6 +4,40 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+#[tauri::command]
+fn show_adhan_notification(app: tauri::AppHandle, prayer_name: String) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        use tauri_winrt_notification::{Toast, Duration};
+        use tauri::Emitter;
+
+        let app_handle = app.clone();
+        let title = format!("Waktu {} Telah Tiba", prayer_name);
+        let body = "Mari segera menunaikan ibadah salat.";
+
+        std::thread::spawn(move || {
+            let toast = Toast::new(Toast::POWERSHELL_APP_ID)
+                .title(&title)
+                .text1(body)
+                .duration(Duration::Long)
+                .add_button("Matikan Azhan", "stop_adhan")
+                .on_activated(move |_action| {
+                    let _ = app_handle.emit("stop-adhan", ());
+                    Ok(())
+                });
+
+            let _ = toast.show();
+        });
+
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (app, prayer_name);
+        Ok(())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -67,7 +101,7 @@ pub fn run() {
             }
             _ => {}
         })
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![greet, show_adhan_notification])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
