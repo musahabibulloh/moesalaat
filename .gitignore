@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 
 *.exe
+*.msix
+msix_stage/
+dist-msix/
+store-assets/
